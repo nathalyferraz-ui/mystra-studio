@@ -1,0 +1,21 @@
+import { z } from "zod";
+import { idSchema, slugSchema } from "@/features/cms/schema";
+import { zonedInstant } from "@/features/events/time";
+export const jobStatuses = { DRAFT: "Rascunho", PUBLISHED: "Publicado", CLOSED: "Encerrada", ARCHIVED: "Arquivada" } as const;
+export const jobModes = { REMOTO: "Remoto", PRESENCIAL: "Presencial", HIBRIDO: "Híbrido" } as const;
+export const jobLevels = { ESTAGIO: "Estágio", JUNIOR: "Júnior", PLENO: "Pleno", SENIOR: "Sênior", LIDERANCA: "Liderança" } as const;
+export const applicationStatuses = { RECEBIDA: "Recebida", EM_ANALISE: "Em análise", TRIAGEM: "Triagem", ENTREVISTA: "Entrevista", AVALIACAO_TECNICA: "Avaliação técnica", APROVADA: "Aprovada", REPROVADA: "Reprovada", DESISTENCIA: "Desistência" } as const;
+const text = (max: number) => z.string().trim().max(max);
+const date = z.string().max(40).refine(value => { if (!value) return true; if (!/(?:Z|[+-]\d{2}:\d{2})$/.test(value)) return false; try { zonedInstant(value, "UTC"); return true; } catch { return false; } }, "Use uma data ISO válida com fuso explícito.");
+export const jobSchema = z.object({ id: idSchema.optional(), version: z.number().int().positive().optional(), title: text(180).min(3), slug: slugSchema, summary: text(500).min(10), area: text(120).min(2), mode: z.enum(["REMOTO", "PRESENCIAL", "HIBRIDO"]), level: z.enum(["ESTAGIO", "JUNIOR", "PLENO", "SENIOR", "LIDERANCA"]), contractType: text(100).min(2), location: text(250), description: text(30000).min(20), responsibilities: text(15000).min(10), requirements: text(15000).min(10), desirable: text(10000), benefits: text(10000), status: z.enum(["DRAFT", "PUBLISHED", "CLOSED", "ARCHIVED"]), keepClosedPublic: z.boolean(), publishedAt: date, deadline: date, seoTitle: text(70), seoDescription: text(170) }).superRefine((data, ctx) => {
+  if (data.id && !data.version) ctx.addIssue({ code: "custom", path: ["version"], message: "Recarregue a versão atual." });
+  if (data.mode !== "REMOTO" && data.location.length < 3) ctx.addIssue({ code: "custom", path: ["location"], message: "Informe a localidade da vaga presencial ou híbrida." });
+  if (data.deadline && data.publishedAt && new Date(data.deadline) <= new Date(data.publishedAt)) ctx.addIssue({ code: "custom", path: ["deadline"], message: "O prazo deve ser posterior à publicação." });
+  if (data.status === "PUBLISHED" && !data.publishedAt && data.deadline && new Date(data.deadline) <= new Date()) ctx.addIssue({ code: "custom", path: ["deadline"], message: "Para publicar, informe um prazo futuro ou uma data de publicação anterior ao prazo histórico." });
+});
+export type JobInput = z.infer<typeof jobSchema>;
+const professionalURL = text(2048).refine(value => { if (!value) return true; try { const u = new URL(value); return u.protocol === "https:" && !u.username && !u.password; } catch { return false; } }, "Informe URL HTTPS válida, sem credenciais.");
+export const applicationSchema = z.object({ jobId: idSchema, name: text(120).min(3, "Informe seu nome completo."), email: z.email("Confira o e-mail.").max(254).transform(v => v.toLowerCase()), phone: text(30).refine(v => !v || /^[+()\d .-]{7,30}$/.test(v) && v.replace(/\D/g, "").length >= 7 && v.replace(/\D/g, "").length <= 18, "Confira o telefone."), cityState: text(160), linkedin: professionalURL, portfolio: professionalURL, message: text(6000).min(20, "Escreva pelo menos 20 caracteres."), privacy: z.literal(true, { error: "Confirme a ciência do aviso." }), website: z.literal(""), token: text(300) });
+export type ApplicationInput = z.infer<typeof applicationSchema>;
+export const applicationUpdateSchema = z.object({ id: idSchema, version: z.number().int().positive(), status: z.enum(["RECEBIDA", "EM_ANALISE", "TRIAGEM", "ENTREVISTA", "AVALIACAO_TECNICA", "APROVADA", "REPROVADA", "DESISTENCIA"]), assigneeId: idSchema.or(z.literal("")), note: text(5000) });
+export type CareerResult = { ok: boolean; message: string; id?: string; errors?: Record<string, string[]> };

@@ -1,0 +1,243 @@
+{
+  "scope": "Isolated real UI components with empty fixtures, mocked Next navigation, no auth/database/business actions; not authenticated application E2E",
+  "results": [
+    {
+      "path": "/admin",
+      "requestedWidth": 1440,
+      "width": 1430,
+      "scrollWidth": 1430,
+      "overflow": false,
+      "h1": 1,
+      "mains": 1,
+      "activeLinks": 1,
+      "violations": []
+    },
+    {
+      "path": "/admin/servicos",
+      "requestedWidth": 1440,
+      "width": 1440,
+      "scrollWidth": 1440,
+      "overflow": false,
+      "h1": 1,
+      "mains": 1,
+      "activeLinks": 1,
+      "violations": []
+    },
+    {
+      "path": "/admin/servicos/novo",
+      "requestedWidth": 1440,
+      "width": 1430,
+      "scrollWidth": 1430,
+      "overflow": false,
+      "h1": 1,
+      "mains": 1,
+      "activeLinks": 1,
+      "violations": []
+    },
+    {
+      "path": "/admin",
+      "requestedWidth": 1024,
+      "width": 1014,
+      "scrollWidth": 1014,
+      "overflow": false,
+      "h1": 1,
+      "mains": 1,
+      "activeLinks": 1,
+      "violations": []
+    },
+    {
+      "path": "/admin/servicos",
+      "requestedWidth": 1024,
+      "width": 1024,
+      "scrollWidth": 1024,
+      "overflow": false,
+      "h1": 1,
+      "mains": 1,
+      "activeLinks": 1,
+      "violations": []
+    },
+    {
+      "path": "/admin/servicos/novo",
+      "requestedWidth": 1024,
+      "width": 1014,
+      "scrollWidth": 1014,
+      "overflow": false,
+      "h1": 1,
+      "mains": 1,
+      "activeLinks": 1,
+      "violations": []
+    },
+    {
+      "path": "/admin",
+      "requestedWidth": 768,
+      "width": 758,
+      "scrollWidth": 758,
+      "overflow": false,
+      "h1": 1,
+      "mains": 1,
+      "activeLinks": 1,
+      "violations": []
+    },
+    {
+      "path": "/admin/servicos",
+      "requestedWidth": 768,
+      "width": 768,
+      "scrollWidth": 768,
+      "overflow": false,
+      "h1": 1,
+      "mains": 1,
+      "activeLinks": 1,
+      "violations": []
+    },
+    {
+      "path": "/admin/servicos/novo",
+      "requestedWidth": 768,
+      "width": 758,
+      "scrollWidth": 758,
+      "overflow": false,
+      "h1": 1,
+      "mains": 1,
+      "activeLinks": 1,
+      "violations": []
+    },
+    {
+      "path": "/admin",
+      "requestedWidth": 390,
+      "width": 390,
+      "scrollWidth": 390,
+      "overflow": false,
+      "h1": 1,
+      "mains": 1,
+      "activeLinks": 1,
+      "violations": []
+    },
+    {
+      "path": "/admin/servicos",
+      "requestedWidth": 390,
+      "width": 390,
+      "scrollWidth": 390,
+      "overflow": false,
+      "h1": 1,
+      "mains": 1,
+      "activeLinks": 1,
+      "violations": []
+    },
+    {
+      "path": "/admin/servicos/novo",
+      "requestedWidth": 390,
+      "width": 390,
+      "scrollWidth": 390,
+      "overflow": false,
+      "h1": 1,
+      "mains": 1,
+      "activeLinks": 1,
+      "violations": []
+    },
+    {
+      "path": "/admin",
+      "requestedWidth": 320,
+      "width": 320,
+      "scrollWidth": 320,
+      "overflow": false,
+      "h1": 1,
+      "mains": 1,
+      "activeLinks": 1,
+      "violations": []
+    },
+    {
+      "path": "/admin/servicos",
+      "requestedWidth": 320,
+      "width": 320,
+      "scrollWidth": 320,
+      "overflow": false,
+      "h1": 1,
+      "mains": 1,
+      "activeLinks": 1,
+      "violations": []
+    },
+    {
+      "path": "/admin/servicos/novo",
+      "requestedWidth": 320,
+      "width": 320,
+      "scrollWidth": 320,
+      "overflow": false,
+      "h1": 1,
+      "mains": 1,
+      "activeLinks": 1,
+      "violations": []
+    }
+  ],
+  "interactions": [
+    {
+      "name": "compact sidebar width",
+      "passed": true
+    },
+    {
+      "name": "compact preference persists on reload",
+      "passed": true
+    },
+    {
+      "name": "compact tooltip appears on focus",
+      "passed": true
+    },
+    {
+      "name": "tooltip dismisses with Escape",
+      "passed": true
+    },
+    {
+      "name": "group expands",
+      "passed": true
+    },
+    {
+      "name": "collapsed group preference persists",
+      "passed": true
+    },
+    {
+      "name": "active group expands over collapsed preference",
+      "passed": true
+    },
+    {
+      "name": "edit route retains one active service",
+      "passed": true
+    },
+    {
+      "name": "Ctrl K opens navigation command",
+      "passed": true
+    },
+    {
+      "name": "command search matches accented module names",
+      "passed": true
+    },
+    {
+      "name": "command Enter follows real target and closes",
+      "passed": true
+    },
+    {
+      "name": "mobile drawer opens and receives focus",
+      "passed": true
+    },
+    {
+      "name": "mobile Escape closes and restores focus",
+      "passed": true
+    },
+    {
+      "name": "mobile navigation closes drawer",
+      "passed": true
+    },
+    {
+      "name": "table scroll is keyboard accessible without page overflow",
+      "passed": true
+    },
+    {
+      "name": "confirmation dialog traps focus",
+      "passed": true
+    },
+    {
+      "name": "confirmation dismisses with Escape",
+      "passed": true
+    }
+  ],
+  "runtimeErrors": [],
+  "blockedWrites": [],
+  "failed": 0
+}

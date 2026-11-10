@@ -1,0 +1,4 @@
+import { LayoutDashboard, PanelsTopLeft, Blocks, GalleryVerticalEnd, GraduationCap, Newspaper, Tags, Files, CalendarDays, BriefcaseBusiness, UserRoundCheck, ContactRound, Images, UsersRound, Handshake, CircleHelp, UserCog, ShieldCheck, History, Settings, Plus, House } from "lucide-react";
+import type { AdminIconName } from "@/features/admin/navigation";
+const icons = { LayoutDashboard, PanelsTopLeft, Blocks, GalleryVerticalEnd, GraduationCap, Newspaper, Tags, Files, CalendarDays, BriefcaseBusiness, UserRoundCheck, ContactRound, Images, UsersRound, Handshake, CircleHelp, UserCog, ShieldCheck, History, Settings, Plus, House };
+export function AdminIcon({ name, size = 18 }: { name: AdminIconName; size?: number }) { const Icon = icons[name]; return <Icon size={size} strokeWidth={1.7} aria-hidden="true" />; }

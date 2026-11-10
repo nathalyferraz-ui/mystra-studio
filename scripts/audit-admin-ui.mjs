@@ -1,0 +1,68 @@
+import { readFileSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
+import { adminBrowser } from "./lib/admin-browser.mjs";
+const require = createRequire(import.meta.url), b = await adminBrowser();
+const results = [], interactions = [];
+const assert = (name, passed) => { interactions.push({ name, passed: !!passed }); if (!passed) console.log(JSON.stringify({ failed: name })); };
+try {
+  await b.call("Emulation.setEmulatedMedia", { features: [{ name: "prefers-reduced-motion", value: "reduce" }] });
+  await b.navigate("/admin");
+  await b.evaluate("localStorage.removeItem('mystra.admin.ui.v1');window.dispatchEvent(new Event('mystra-admin-ui'))");
+  for (const width of [1440, 1024, 768, 390, 320]) for (const path of ["/admin", "/admin/servicos", "/admin/servicos/novo"]) {
+    await b.viewport(width); await b.navigate(path);
+    await b.evaluate(readFileSync(require.resolve("axe-core/axe.min.js"), "utf8"));
+    const layout = await b.evaluate("({width:document.documentElement.clientWidth,scrollWidth:document.documentElement.scrollWidth,overflow:document.documentElement.scrollWidth>document.documentElement.clientWidth,h1:document.querySelectorAll('h1').length,mains:document.querySelectorAll('main').length,activeLinks:document.querySelectorAll('.ma-sidebar a[aria-current=page]').length})");
+    const violations = await b.evaluate("axe.run({exclude:[['.qa-fixture-notice']]},{runOnly:{type:'tag',values:['wcag2a','wcag2aa','wcag21aa','wcag22aa']}}).then(r=>r.violations.map(v=>({id:v.id,impact:v.impact,targets:v.nodes.map(n=>n.target),summaries:v.nodes.map(n=>n.failureSummary)})))");
+    const result = { path, requestedWidth: width, ...layout, violations }; results.push(result);
+    console.log(JSON.stringify({ path, width, overflow: layout.overflow, violations: violations.map(v => v.id) }));
+    if (path === "/admin" || width === 1440 && path.endsWith("novo")) await b.screenshot(`.next/cache/admin-redesign/after-components-${path.endsWith("novo") ? "form-" : ""}${width}.png`);
+  }
+  await b.viewport(1440); await b.navigate("/admin");
+  await b.evaluate("document.querySelector('[aria-label=\"Recolher sidebar\"]').click()"); await b.pause(200);
+  assert("compact sidebar width", await b.evaluate("Math.round(document.querySelector('.ma-sidebar').getBoundingClientRect().width)===72"));
+  await b.screenshot(".next/cache/admin-redesign/after-components-compact.png");
+  await b.navigate("/admin"); assert("compact preference persists on reload", await b.evaluate("document.querySelector('.ma-shell').dataset.compact==='true'"));
+  await b.evaluate("document.querySelector('.ma-sidebar a[aria-label=\"Serviços\"]').focus()"); await b.pause(100);
+  assert("compact tooltip appears on focus", await b.evaluate("!!document.querySelector('[role=tooltip]')"));
+  await b.call("Input.dispatchKeyEvent", { type: "keyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 }); await b.pause(100);
+  assert("tooltip dismisses with Escape", await b.evaluate("!document.querySelector('[role=tooltip]')"));
+  await b.evaluate("document.querySelector('[aria-label=\"Expandir sidebar\"]').click()"); await b.pause(100);
+  await b.evaluate("[...document.querySelectorAll('.ma-sidebar .ma-group-toggle')].find(n=>n.textContent.includes('Operações')).click()");
+  assert("group expands", await b.evaluate("[...document.querySelectorAll('.ma-sidebar .ma-group-toggle')].find(n=>n.textContent.includes('Operações')).getAttribute('aria-expanded')==='true'"));
+  await b.evaluate("[...document.querySelectorAll('.ma-sidebar .ma-group-toggle')].find(n=>n.textContent.includes('Operações')).click()");
+  await b.navigate("/admin"); assert("collapsed group preference persists", await b.evaluate("[...document.querySelectorAll('.ma-sidebar .ma-group-toggle')].find(n=>n.textContent.includes('Operações')).getAttribute('aria-expanded')==='false'"));
+  await b.navigate("/admin/vagas"); assert("active group expands over collapsed preference", await b.evaluate("[...document.querySelectorAll('.ma-sidebar .ma-group-toggle')].find(n=>n.textContent.includes('Operações')).getAttribute('aria-expanded')==='true'"));
+  await b.navigate("/admin/servicos/fixture/editar"); assert("edit route retains one active service", await b.evaluate("document.querySelectorAll('.ma-sidebar a[aria-current=page]').length===1&&document.querySelector('.ma-sidebar a[aria-current=page]').getAttribute('href')==='/admin/servicos'"));
+  await b.navigate("/admin");
+  await b.call("Input.dispatchKeyEvent", { type: "keyDown", key: "k", code: "KeyK", windowsVirtualKeyCode: 75, modifiers: 2 });
+  await b.pause(100); assert("Ctrl K opens navigation command", await b.evaluate("!!document.querySelector('.ma-command[open]')&&document.activeElement.getAttribute('role')==='combobox'"));
+  await b.call("Input.insertText", { text: "configuracoes" }); await b.pause(100);
+  assert("command search matches accented module names", await b.evaluate("document.querySelectorAll('.ma-command-results [role=option]').length===1&&document.querySelector('.ma-command-results [role=option]').getAttribute('href')==='/admin/configuracoes'"));
+  await b.screenshot(".next/cache/admin-redesign/after-components-command.png");
+  await b.call("Input.dispatchKeyEvent", { type: "keyDown", key: "Enter", code: "Enter", windowsVirtualKeyCode: 13 }); await b.pause(100);
+  assert("command Enter follows real target and closes", await b.evaluate("location.pathname==='/admin/configuracoes'&&!document.querySelector('.ma-command[open]')"));
+  await b.viewport(390); await b.navigate("/admin");
+  await b.evaluate("document.querySelector('[aria-label=\"Abrir navegação\"]').click()"); await b.pause(100);
+  assert("mobile drawer opens and receives focus", await b.evaluate("!!document.querySelector('.ma-mobile-drawer[open]')&&!!document.activeElement.closest('.ma-mobile-drawer')"));
+  await b.screenshot(".next/cache/admin-redesign/after-components-mobile-drawer.png");
+  await b.call("Input.dispatchKeyEvent", { type: "keyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 }); await b.pause(100);
+  assert("mobile Escape closes and restores focus", await b.evaluate("!document.querySelector('.ma-mobile-drawer[open]')&&document.activeElement.getAttribute('aria-label')==='Abrir navegação'"));
+  await b.evaluate("document.querySelector('[aria-label=\"Abrir navegação\"]').click()"); await b.pause(50);
+  await b.evaluate("[...document.querySelectorAll('.ma-mobile-sidebar .ma-nav-item')].find(n=>n.getAttribute('href')==='/admin/servicos').click()"); await b.pause(100);
+  assert("mobile navigation closes drawer", await b.evaluate("location.pathname==='/admin/servicos'&&!document.querySelector('.ma-mobile-drawer[open]')"));
+  await b.evaluate("document.querySelector('.table-scroll').focus()");
+  await b.call("Input.dispatchKeyEvent", { type: "keyDown", key: "ArrowRight", code: "ArrowRight", windowsVirtualKeyCode: 39 }); await b.pause(200);
+  assert("table scroll is keyboard accessible without page overflow", await b.evaluate("document.querySelector('.table-scroll').scrollLeft>0&&document.documentElement.scrollWidth===document.documentElement.clientWidth"));
+  await b.evaluate("[...document.querySelectorAll('button')].find(n=>n.textContent==='Inspecionar diálogo').click()"); await b.pause(100);
+  assert("confirmation dialog traps focus", await b.evaluate("!!document.querySelector('dialog[open]')&&!!document.activeElement.closest('dialog[open]')"));
+  await b.screenshot(".next/cache/admin-redesign/after-components-dialog.png");
+  await b.call("Input.dispatchKeyEvent", { type: "keyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 }); await b.pause(100);
+  assert("confirmation dismisses with Escape", await b.evaluate("!document.querySelector('dialog[open]')"));
+  const failed = results.filter(r => r.overflow || r.violations.length || r.h1 !== 1 || r.mains !== 1).length + interactions.filter(r => !r.passed).length + b.errors.length + b.writes.length;
+  writeFileSync(".next/cache/admin-redesign/visual-results.json", JSON.stringify({ scope: "Isolated real UI components with empty fixtures, mocked Next navigation, no auth/database/business actions; not authenticated application E2E", results, interactions, runtimeErrors: b.errors, blockedWrites: b.writes, failed }, null, 2));
+  console.log(JSON.stringify({ layouts: results.length, interactions: interactions.length, failed, runtimeErrors: b.errors.length, blockedWrites: b.writes.length }));
+  if (failed) process.exitCode = 1;
+} catch (error) {
+  writeFileSync(".next/cache/admin-redesign/visual-results.json", JSON.stringify({ scope: "Isolated UI components, not authenticated application E2E", results, interactions, runtimeErrors: b.errors, blockedWrites: b.writes, interrupted: error instanceof Error ? error.message : "Browser audit interrupted" }, null, 2));
+  throw error;
+} finally { await b.close(); }

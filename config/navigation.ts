@@ -1,0 +1,30 @@
+export const publicNavigation = [
+  { href: "/sobre", label: "O estúdio" },
+  { href: "/servicos", label: "Soluções" },
+  { href: "/portfolio", label: "Portfólio" },
+  { href: "/academia", label: "Academia" },
+  { href: "/eventos", label: "Eventos" },
+  { href: "/blog", label: "Insights" },
+];
+
+export const adminModules = [
+  { slug: "paginas", label: "Páginas", permission: "pages:read" },
+  { slug: "vagas", label: "Vagas", permission: "content:manage" },
+  { slug: "candidaturas", label: "Candidaturas", permission: "recruitment:manage" },
+  { slug: "leads", label: "CRM", permission: "requests:manage" },
+  { slug: "servicos", label: "Serviços", permission: "content:manage" },
+  { slug: "portfolio", label: "Portfólio", permission: "content:manage" },
+  { slug: "cursos", label: "Cursos", permission: "content:manage" },
+  { slug: "blog", label: "Blog", permission: "content:manage" },
+  { slug: "midias", label: "Mídias", permission: "content:manage" },
+  { slug: "categorias", label: "Categorias e tags", permission: "content:manage" },
+  { slug: "documentos", label: "Documentos", permission: "content:manage" },
+  { slug: "eventos", label: "Eventos", permission: "content:manage" },
+  { slug: "equipe", label: "Equipe", permission: "institutional:manage" },
+  { slug: "parceiros", label: "Parceiros", permission: "institutional:manage" },
+  { slug: "faq", label: "FAQ", permission: "institutional:manage" },
+  { slug: "usuarios", label: "Usuários", permission: "users:manage" },
+  { slug: "permissoes", label: "Permissões", permission: "users:manage" },
+  { slug: "logs", label: "Logs", permission: "audit:read" },
+  { slug: "configuracoes", label: "Configurações", permission: "settings:manage" },
+] as const;

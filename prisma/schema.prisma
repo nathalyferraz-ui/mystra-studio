@@ -1,0 +1,669 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id                          String                      @id @default(cuid()) @db.VarChar(191)
+  name                        String
+  email                       String                      @unique
+  emailVerified               Boolean                     @default(false)
+  image                       String?                     @db.Text
+  active                      Boolean                     @default(true)
+  createdAt                   DateTime                    @default(now())
+  updatedAt                   DateTime                    @updatedAt
+  sessions                    Session[]
+  accounts                    Account[]
+  roles                       UserRole[]
+  logs                        AdminLog[]
+  contents                    Content[]
+  media                       Media[]
+  assignedLeads               Lead[]                      @relation("LeadAssignee")
+  leadNotes                   LeadNote[]
+  leadActivities              LeadActivity[]
+  eventRegistrationActivities EventRegistrationActivity[]
+  assignedApplications        JobApplication[]            @relation("ApplicationAssignee")
+  applicationNotes            ApplicationNote[]
+  applicationActivities       ApplicationActivity[]
+  jobActivities               JobActivity[]
+}
+
+model Session {
+  id        String   @id @default(cuid()) @db.VarChar(191)
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?  @db.Text
+  userId    String   @db.VarChar(191)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Account {
+  id                    String    @id @default(cuid()) @db.VarChar(191)
+  accountId             String
+  providerId            String
+  userId                String    @db.VarChar(191)
+  accessToken           String?   @db.Text
+  refreshToken          String?   @db.Text
+  idToken               String?   @db.Text
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?   @db.Text
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([providerId, accountId])
+  @@index([userId])
+}
+
+model Verification {
+  id         String   @id @default(cuid()) @db.VarChar(191)
+  identifier String
+  value      String   @db.Text
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+}
+
+enum RoleCode {
+  ADMIN
+  EDITOR
+  COMERCIAL
+}
+
+model Role {
+  id          String           @id @default(cuid()) @db.VarChar(191)
+  code        RoleCode         @unique
+  name        String
+  users       UserRole[]
+  permissions RolePermission[]
+}
+
+model Permission {
+  id    String           @id @default(cuid()) @db.VarChar(191)
+  code  String           @unique
+  name  String
+  roles RolePermission[]
+}
+
+model UserRole {
+  userId String @db.VarChar(191)
+  roleId String @db.VarChar(191)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+  @@index([roleId])
+}
+
+model RolePermission {
+  roleId       String     @db.VarChar(191)
+  permissionId String     @db.VarChar(191)
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@index([permissionId])
+}
+
+model AdminLog {
+  id        String   @id @default(cuid()) @db.VarChar(191)
+  userId    String?  @db.VarChar(191)
+  action    String
+  resource  String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([createdAt])
+}
+
+model InstitutionalSetting {
+  key       String   @id @db.VarChar(191)
+  value     Json
+  updatedAt DateTime @updatedAt
+}
+
+model RateLimit {
+  id          String @id @default(cuid()) @db.VarChar(191)
+  key         String @unique
+  count       Int
+  lastRequest BigInt
+}
+
+enum ContentKind {
+  SERVICE
+  PROJECT
+  ARTICLE
+}
+
+enum PublicationStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum MediaState {
+  READY
+  DELETING
+}
+
+model Category {
+  id       String      @id @default(cuid())
+  name     String
+  slug     String
+  kind     ContentKind
+  contents Content[]
+
+  @@unique([kind, slug])
+}
+
+model Tag {
+  id       String    @id @default(cuid())
+  name     String
+  slug     String    @unique
+  contents Content[]
+}
+
+model Technology {
+  id       String    @id @default(cuid())
+  name     String
+  slug     String    @unique
+  contents Content[]
+}
+
+// Shared editorial aggregate. kind determines the module and validation rules.
+model Content {
+  id             String            @id @default(cuid())
+  kind           ContentKind
+  title          String
+  slug           String
+  summary        String
+  description    String            @default("") @db.Text
+  body           Json
+  challenge      String            @default("") @db.Text
+  solution       String            @default("") @db.Text
+  results        String            @default("") @db.Text
+  benefits       String[]          @default([])
+  externalUrl    String?
+  icon           String?
+  status         PublicationStatus @default(DRAFT)
+  featured       Boolean           @default(false)
+  sortOrder      Int               @default(0)
+  seoTitle       String?
+  seoDescription String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  publishedAt    DateTime?
+  version        Int               @default(1)
+  categoryId     String?
+  category       Category?         @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  authorId       String            @db.VarChar(191)
+  author         User              @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  coverId        String?
+  cover          Media?            @relation("Cover", fields: [coverId], references: [id], onDelete: Restrict)
+  mediaLinks     ContentMedia[]
+  tags           Tag[]
+  technologies   Technology[]
+  leads          Lead[]
+
+  @@unique([kind, slug])
+  @@index([kind, status, publishedAt])
+  @@index([categoryId])
+  @@index([authorId])
+  @@index([coverId])
+}
+
+model Media {
+  id            String         @id @default(cuid())
+  name          String
+  alt           String
+  storagePath   String         @unique
+  mimeType      String
+  size          Int
+  width         Int
+  height        Int
+  state         MediaState     @default(READY)
+  createdAt     DateTime       @default(now())
+  uploadedById  String         @db.VarChar(191)
+  uploadedBy    User           @relation(fields: [uploadedById], references: [id], onDelete: Restrict)
+  covers        Content[]      @relation("Cover")
+  links         ContentMedia[]
+  eventCovers   Event[]        @relation("EventCover")
+  eventGallery  EventMedia[]
+  speakerPhotos Speaker[]
+
+  @@index([uploadedById])
+}
+
+model ContentMedia {
+  contentId String
+  mediaId   String
+  position  Int     @default(0)
+  gallery   Boolean @default(false)
+  content   Content @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  media     Media   @relation(fields: [mediaId], references: [id], onDelete: Restrict)
+
+  @@id([contentId, mediaId])
+  @@index([mediaId])
+}
+
+enum LeadStatus {
+  NOVO
+  EM_ANALISE
+  EM_CONTATO
+  PROPOSTA_ENVIADA
+  CONCLUIDO
+  ARQUIVADO
+}
+
+enum LeadPriority {
+  BAIXA
+  NORMAL
+  ALTA
+  URGENTE
+}
+
+enum LeadType {
+  ORCAMENTO
+  SERVICOS
+  PARCERIAS
+  CURSOS
+  GERAL
+}
+
+model Lead {
+  id                    String           @id @default(cuid())
+  name                  String           @db.VarChar(120)
+  email                 String           @db.VarChar(254)
+  phone                 String           @db.VarChar(30)
+  company               String           @db.VarChar(160)
+  type                  LeadType
+  subject               String           @db.VarChar(180)
+  message               String           @db.Text
+  projectType           String           @default("") @db.VarChar(180)
+  deadline              String           @default("") @db.VarChar(160)
+  investment            String           @default("") @db.VarChar(160)
+  status                LeadStatus       @default(NOVO)
+  priority              LeadPriority     @default(NORMAL)
+  origin                String           @db.VarChar(40)
+  submissionKey         String           @unique @db.VarChar(64)
+  fingerprint           String           @db.VarChar(64)
+  privacyVersion        String           @db.VarChar(40)
+  privacyAcknowledgedAt DateTime         @default(now())
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+  completedAt           DateTime?
+  version               Int              @default(1)
+  serviceId             String?
+  service               Content?         @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+  assigneeId            String?          @db.VarChar(191)
+  assignee              User?            @relation("LeadAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  notes                 LeadNote[]
+  activities            LeadActivity[]
+  attachments           LeadAttachment[]
+
+  @@index([status, createdAt])
+  @@index([type, createdAt])
+  @@index([priority, createdAt])
+  @@index([assigneeId, createdAt])
+  @@index([serviceId])
+  @@index([fingerprint, createdAt])
+  @@index([createdAt])
+}
+
+model LeadNote {
+  id        String   @id @default(cuid())
+  leadId    String
+  authorId  String   @db.VarChar(191)
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Restrict)
+
+  @@index([leadId, createdAt])
+  @@index([authorId])
+}
+
+model LeadActivity {
+  id        String   @id @default(cuid())
+  leadId    String
+  userId    String?  @db.VarChar(191)
+  type      String   @db.VarChar(40)
+  fromValue String?  @db.VarChar(191)
+  toValue   String?  @db.VarChar(191)
+  createdAt DateTime @default(now())
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([leadId, createdAt])
+  @@index([userId])
+}
+
+model LeadAttachment {
+  id           String   @id @default(cuid())
+  leadId       String
+  storagePath  String   @unique
+  originalName String   @db.VarChar(180)
+  mimeType     String
+  size         Int
+  createdAt    DateTime @default(now())
+  lead         Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId])
+}
+
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  CANCELED
+  ARCHIVED
+}
+
+enum EventMode {
+  ONLINE
+  PRESENCIAL
+  HIBRIDO
+}
+
+enum EventRegistrationStatus {
+  RECEBIDA
+  CONFIRMADA
+  CANCELADA
+}
+
+model EventCategory {
+  id          String  @id @default(cuid())
+  name        String  @db.VarChar(100)
+  slug        String  @unique @db.VarChar(150)
+  description String  @default("") @db.VarChar(1500)
+  events      Event[]
+}
+
+model Event {
+  id                   String              @id @default(cuid())
+  title                String              @db.VarChar(180)
+  slug                 String              @unique @db.VarChar(150)
+  summary              String              @db.VarChar(500)
+  description          String              @db.Text
+  objectives           String              @default("") @db.Text
+  audience             String              @default("") @db.Text
+  topics               String[]            @default([])
+  additionalInfo       String              @default("") @db.Text
+  privateAccess        String              @default("") @db.Text
+  startsAt             DateTime            @db.Timestamptz(3)
+  endsAt               DateTime            @db.Timestamptz(3)
+  timezone             String              @db.VarChar(80)
+  mode                 EventMode
+  location             String              @default("") @db.VarChar(500)
+  capacity             Int?
+  registrationOpen     Boolean             @default(false)
+  registrationStartsAt DateTime?           @db.Timestamptz(3)
+  registrationEndsAt   DateTime?           @db.Timestamptz(3)
+  status               EventStatus         @default(DRAFT)
+  featured             Boolean             @default(false)
+  seoTitle             String              @default("") @db.VarChar(70)
+  seoDescription       String              @default("") @db.VarChar(170)
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  publishedAt          DateTime?
+  version              Int                 @default(1)
+  categoryId           String?
+  category             EventCategory?      @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  coverId              String?
+  cover                Media?              @relation("EventCover", fields: [coverId], references: [id], onDelete: Restrict)
+  gallery              EventMedia[]
+  speakers             EventSpeaker[]
+  schedule             EventScheduleItem[]
+  registrations        EventRegistration[]
+
+  @@index([status, startsAt])
+  @@index([categoryId, startsAt])
+  @@index([mode, startsAt])
+  @@index([coverId])
+}
+
+model Speaker {
+  id              String              @id @default(cuid())
+  name            String              @db.VarChar(120)
+  specialty       String              @db.VarChar(180)
+  biography       String              @db.Text
+  professionalUrl String              @default("") @db.VarChar(2048)
+  visible         Boolean             @default(true)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  photoId         String?
+  photo           Media?              @relation(fields: [photoId], references: [id], onDelete: Restrict)
+  events          EventSpeaker[]
+  schedule        EventScheduleItem[]
+
+  @@index([photoId])
+}
+
+model EventSpeaker {
+  eventId   String
+  speakerId String
+  position  Int     @default(0)
+  event     Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  speaker   Speaker @relation(fields: [speakerId], references: [id], onDelete: Restrict)
+
+  @@id([eventId, speakerId])
+  @@index([speakerId])
+}
+
+model EventScheduleItem {
+  id          String   @id @default(cuid())
+  eventId     String
+  speakerId   String?
+  startsAt    DateTime @db.Timestamptz(3)
+  title       String   @db.VarChar(180)
+  description String   @default("") @db.VarChar(2000)
+  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  speaker     Speaker? @relation(fields: [speakerId], references: [id], onDelete: SetNull)
+
+  @@index([eventId, startsAt])
+  @@index([speakerId])
+}
+
+model EventMedia {
+  eventId  String
+  mediaId  String
+  position Int    @default(0)
+  caption  String @default("") @db.VarChar(300)
+  event    Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  media    Media  @relation(fields: [mediaId], references: [id], onDelete: Restrict)
+
+  @@id([eventId, mediaId])
+  @@index([mediaId])
+}
+
+model EventRegistration {
+  id                    String                      @id @default(cuid())
+  eventId               String
+  name                  String                      @db.VarChar(120)
+  email                 String                      @db.VarChar(254)
+  phone                 String                      @default("") @db.VarChar(30)
+  status                EventRegistrationStatus     @default(RECEBIDA)
+  privacyVersion        String                      @db.VarChar(40)
+  privacyAcknowledgedAt DateTime                    @default(now())
+  createdAt             DateTime                    @default(now())
+  updatedAt             DateTime                    @updatedAt
+  version               Int                         @default(1)
+  event                 Event                       @relation(fields: [eventId], references: [id], onDelete: Restrict)
+  activities            EventRegistrationActivity[]
+
+  @@unique([eventId, email])
+  @@index([eventId, status, createdAt])
+}
+
+model EventRegistrationActivity {
+  id             String                   @id @default(cuid())
+  registrationId String
+  userId         String?                  @db.VarChar(191)
+  action         String                   @db.VarChar(40)
+  previousStatus EventRegistrationStatus?
+  nextStatus     EventRegistrationStatus
+  createdAt      DateTime                 @default(now())
+  registration   EventRegistration        @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  user           User?                    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([registrationId, createdAt])
+  @@index([userId])
+}
+
+enum JobStatus {
+  DRAFT
+  PUBLISHED
+  CLOSED
+  ARCHIVED
+}
+
+enum JobMode {
+  REMOTO
+  PRESENCIAL
+  HIBRIDO
+}
+
+enum JobLevel {
+  ESTAGIO
+  JUNIOR
+  PLENO
+  SENIOR
+  LIDERANCA
+}
+
+enum ApplicationStatus {
+  RECEBIDA
+  EM_ANALISE
+  TRIAGEM
+  ENTREVISTA
+  AVALIACAO_TECNICA
+  APROVADA
+  REPROVADA
+  DESISTENCIA
+}
+
+model Job {
+  id               String           @id @default(cuid())
+  title            String           @db.VarChar(180)
+  slug             String           @unique @db.VarChar(150)
+  summary          String           @db.VarChar(500)
+  area             String           @db.VarChar(120)
+  mode             JobMode
+  level            JobLevel
+  contractType     String           @db.VarChar(100)
+  location         String           @default("") @db.VarChar(250)
+  description      String           @db.Text
+  responsibilities String           @db.Text
+  requirements     String           @db.Text
+  desirable        String           @default("") @db.Text
+  benefits         String           @default("") @db.Text
+  status           JobStatus        @default(DRAFT)
+  keepClosedPublic Boolean          @default(true)
+  publishedAt      DateTime?        @db.Timestamptz(3)
+  deadline         DateTime?        @db.Timestamptz(3)
+  closedAt         DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  seoTitle         String           @default("") @db.VarChar(70)
+  seoDescription   String           @default("") @db.VarChar(170)
+  version          Int              @default(1)
+  applications     JobApplication[]
+  activities       JobActivity[]
+
+  @@index([status, publishedAt])
+  @@index([area, status])
+  @@index([mode, level])
+  @@index([deadline])
+}
+
+model JobApplication {
+  id                    String                @id @default(cuid())
+  jobId                 String
+  name                  String                @db.VarChar(120)
+  email                 String                @db.VarChar(254)
+  phone                 String                @default("") @db.VarChar(30)
+  cityState             String                @default("") @db.VarChar(160)
+  linkedin              String                @default("") @db.VarChar(2048)
+  portfolio             String                @default("") @db.VarChar(2048)
+  message               String                @db.Text
+  resumePath            String                @unique
+  resumeName            String                @db.VarChar(180)
+  resumeSize            Int
+  resumeHash            String                @db.VarChar(64)
+  status                ApplicationStatus     @default(RECEBIDA)
+  assigneeId            String?               @db.VarChar(191)
+  privacyVersion        String                @db.VarChar(40)
+  privacyAcknowledgedAt DateTime              @default(now())
+  retentionUntil        DateTime
+  synthetic             Boolean               @default(false)
+  deletingAt            DateTime?
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+  version               Int                   @default(1)
+  job                   Job                   @relation(fields: [jobId], references: [id], onDelete: Restrict)
+  assignee              User?                 @relation("ApplicationAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  notes                 ApplicationNote[]
+  activities            ApplicationActivity[]
+
+  @@unique([jobId, email])
+  @@index([jobId, status, createdAt])
+  @@index([status, createdAt])
+  @@index([assigneeId, createdAt])
+  @@index([retentionUntil])
+}
+
+model ApplicationNote {
+  id            String         @id @default(cuid())
+  applicationId String
+  authorId      String         @db.VarChar(191)
+  content       String         @db.Text
+  createdAt     DateTime       @default(now())
+  application   JobApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  author        User           @relation(fields: [authorId], references: [id], onDelete: Restrict)
+
+  @@index([applicationId, createdAt])
+  @@index([authorId])
+}
+
+model ApplicationActivity {
+  id            String         @id @default(cuid())
+  applicationId String
+  userId        String?        @db.VarChar(191)
+  type          String         @db.VarChar(40)
+  previousValue String?        @db.VarChar(191)
+  nextValue     String?        @db.VarChar(191)
+  createdAt     DateTime       @default(now())
+  application   JobApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  user          User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([applicationId, createdAt])
+  @@index([userId])
+}
+
+model JobActivity {
+  id             String     @id @default(cuid())
+  jobId          String
+  userId         String?    @db.VarChar(191)
+  type           String     @db.VarChar(40)
+  previousStatus JobStatus?
+  nextStatus     JobStatus
+  createdAt      DateTime   @default(now())
+  job            Job        @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  user           User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([jobId, createdAt])
+  @@index([userId])
+}
